@@ -1,5 +1,7 @@
 # Kubernetes + Flagger + Flux + Istio
 
+**Based on materials:**
+
 * Web Pages: [https://ruzickap.github.io/k8s-flagger-istio-flux](https://ruzickap.github.io/k8s-flagger-istio-flux)
 * YouTube: [https://youtu.be/ot4SvFZWJuE](https://youtu.be/ot4SvFZWJuE)
 
@@ -8,9 +10,88 @@
 
 ## Prepared env
 
-**I prepared minikube with Istio**
-**added Metal LB**
 
+```
+$ {
+minikube --profile my-profile config set memory 8192
+minikube --profile my-profile config set cpus 4
+
+minikube --profile my-profile config set vm-driver virtualbox
+// minikube --profile my-profile config set vm-driver docker
+
+minikube --profile my-profile config set kubernetes-version v1.16.1
+minikube start --profile my-profile
+}
+```
+
+<br/>
+
+    // Remove minikube
+    // $ minikube --profile my-profile stop && minikube --profile my-profile delete
+
+<br/>
+
+    $ kubectl version --short
+    Client Version: v1.18.1
+    Server Version: v1.16.1
+
+
+<br/>
+
+### Setup istioctl on localhost
+
+    $ curl -L https://istio.io/downloadIstio | sh - && chmod +x $HOME/istio-1.5.1/bin/istioctl && sudo mv $HOME/istio-1.5.1/bin/istioctl /usr/local/bin/
+
+<br/>
+
+### Run istio services in minikube
+
+https://istio.io/docs/setup/additional-setup/config-profiles/
+
+
+    $ istioctl manifest apply --set profile=default
+
+<br/>
+
+    $ kubectl label namespace default istio-injection=enabled
+
+
+
+<br/>
+
+### Add Metal LB
+
+Metal LB help recieve external IP
+
+<br/>
+
+    $ kubectl apply -f https://raw.githubusercontent.com/google/metallb/v0.8.3/manifests/metallb.yaml
+
+<br/>
+
+    $ minikube --profile my-profile ip
+    192.168.99.105
+
+<br/>
+
+```
+$ cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: metallb-system
+  name: config
+data:
+  config: |
+    address-pools:
+    - name: custom-ip-space
+      protocol: layer2
+      addresses:
+      - 192.168.99.105/28
+EOF
+```
+
+<br/>
 
 ### [Part 02 - Install Flux]
 
@@ -22,9 +103,8 @@ except repo should be
 
 github.com/webmakaka/k8s-flux-repository
 
+
 <br/>
-
-
 
 ### [Part 04 - Install Flagger]
 
@@ -150,7 +230,7 @@ replace webmakaka.com on your domain
 
 <br/>
 
-$ sudo vi /etc/hosts
+    $ sudo vi /etc/hosts
 
 <br/>
 
@@ -178,6 +258,8 @@ $ sudo vi /etc/hosts
 
 <br/>
 
+<!--
+
 ### 
 
     $ minikube --profile my-profile ip
@@ -186,6 +268,8 @@ $ sudo vi /etc/hosts
     $ kubectl -n istio-system get services 
 
     $ curl 192.168.99.109:31193
+
+-->
 
 <br/>
 
@@ -222,6 +306,8 @@ default:deployment/podinfo  podinfo    webmakaka/podinfo
                                            stg-5bkv94wh   16 Apr 20 22:18 UTC
                                            dev-mmbudouy   16 Apr 20 22:11 UTC
 ```
+
+<br/>
 
     $ while true; do curl -s http://podinfo.webmakaka.com | jq .message; sleep 3; done
 
